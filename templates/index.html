@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta name="theme-color" content="#111827">
+
+    <title>NovaAI — AI Chatbot</title>
+
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+
+    <main class="chat-app">
+
+        <header class="chat-header">
+
+            <div class="brand">
+                <div class="bot-icon">🤖</div>
+
+                <div>
+                    <h1>NovaAI</h1>
+
+                    <div class="status">
+                        <span class="status-dot"></span>
+                        <span>Online</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="header-actions">
+
+                <button
+                    id="newChat"
+                    class="header-button"
+                    type="button"
+                    title="New conversation"
+                >
+                    ➕
+                </button>
+
+                <button
+                    id="themeToggle"
+                    class="header-button"
+                    type="button"
+                    title="Toggle dark mode"
+                >
+                    🌙
+                </button>
+
+                <button
+                    id="clearChat"
+                    class="header-button"
+                    type="button"
+                    title="Clear chat"
+                >
+                    🗑️
+                </button>
+
+            </div>
+
+        </header>
+
+
+        <section id="chatMessages" class="chat-messages">
+
+            <div class="welcome-card">
+
+                <div class="welcome-icon">✨</div>
+
+                <h2>Welcome to NovaAI</h2>
+
+                <p>
+                    Your intelligent chat assistant.
+                    Ask a question and start a conversation.
+                </p>
+
+            </div>
+
+            <div class="message bot-message">
+
+                <div class="avatar">🤖</div>
+
+                <div>
+                    <div class="message-content">
+                        Hello! 👋 How can I help you today?
+                    </div>
+
+                    <div class="message-time">Now</div>
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <form id="chatForm" class="chat-form">
+
+            <div class="input-wrapper">
+
+                <input
+                    type="text"
+                    id="messageInput"
+                    placeholder="Message NovaAI..."
+                    autocomplete="off"
+                    maxlength="1000"
+                    required
+                >
+
+                <button
+                    type="submit"
+                    id="sendButton"
+                    aria-label="Send message"
+                >
+                    ➤
+                </button>
+
+            </div>
+
+            <p class="input-hint">
+                NovaAI • Python Flask • AI Assistant
+            </p>
+
+        </form>
+
+    </main>
+
+
+    <script src="/static/app.js"></script>
+
+</body>
+</html>
