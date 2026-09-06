@@ -1,3 +1,7 @@
+
+
+
+
 const chatForm = document.getElementById("chatForm");
 const messageInput = document.getElementById("messageInput");
 const chatMessages = document.getElementById("chatMessages");
@@ -5,6 +9,11 @@ const sendButton = document.getElementById("sendButton");
 const clearChat = document.getElementById("clearChat");
 const themeToggle = document.getElementById("themeToggle");
 const newChat = document.getElementById("newChat");
+const historyToggle = document.getElementById("historyToggle");
+const closeHistory = document.getElementById("closeHistory");
+const historyPanel = document.getElementById("historyPanel");
+const conversationList = document.getElementById("conversationList");
+const historyNewChat = document.getElementById("historyNewChat");
 
 const STORAGE_KEY = "novaai_conversations";
 const ACTIVE_KEY = "novaai_active_conversation";
@@ -31,8 +40,8 @@ function createConversation() {
 
     return id;
 }
-
 function saveConversations() {
+
     localStorage.setItem(
         STORAGE_KEY,
         JSON.stringify(conversations)
@@ -42,6 +51,98 @@ function saveConversations() {
         ACTIVE_KEY,
         activeConversationId
     );
+
+    renderConversationList();
+}
+function renderConversationList() {
+
+    conversationList.innerHTML = "";
+
+    const ids = Object.keys(conversations).reverse();
+
+    if (ids.length === 0) {
+
+        conversationList.innerHTML = `
+            <div class="history-empty">
+                No conversations yet.
+            </div>
+        `;
+
+        return;
+    }
+
+    ids.forEach(id => {
+
+        const conversation = conversations[id];
+
+        const item = document.createElement("div");
+
+        item.className =
+            "conversation-item" +
+            (id === activeConversationId ? " active" : "");
+
+        item.innerHTML = `
+            <span>💬</span>
+            <span class="conversation-title">
+                ${escapeHtml(conversation.title || "New conversation")}
+            </span>
+            <button
+                class="history-delete"
+                type="button"
+                title="Delete conversation"
+            >
+                🗑️
+            </button>
+        `;
+
+        item.addEventListener("click", event => {
+
+            if (event.target.closest(".history-delete")) {
+                return;
+            }
+
+            activeConversationId = id;
+
+            saveConversations();
+
+            renderConversation();
+
+            renderConversationList();
+
+            historyPanel.classList.remove("open");
+        });
+
+        const deleteButton =
+            item.querySelector(".history-delete");
+
+        deleteButton.addEventListener("click", event => {
+
+            event.stopPropagation();
+
+            delete conversations[id];
+
+            if (id === activeConversationId) {
+
+                const remaining =
+                    Object.keys(conversations);
+
+                if (remaining.length > 0) {
+                    activeConversationId =
+                        remaining[remaining.length - 1];
+                } else {
+                    createConversation();
+                }
+            }
+
+            saveConversations();
+
+            renderConversation();
+
+            renderConversationList();
+        });
+
+        conversationList.appendChild(item);
+    });
 }
 
 function getActiveConversation() {
@@ -377,4 +478,22 @@ function initialize() {
     messageInput.focus();
 }
 
+
 initialize();
+
+historyToggle.addEventListener("click", () => {
+    historyPanel.classList.toggle("open");
+    renderConversationList();
+});
+
+closeHistory.addEventListener("click", () => {
+    historyPanel.classList.remove("open");
+});
+
+historyNewChat.addEventListener("click", () => {
+    createConversation();
+    renderConversation();
+    renderConversationList();
+    historyPanel.classList.remove("open");
+    messageInput.focus();
+});

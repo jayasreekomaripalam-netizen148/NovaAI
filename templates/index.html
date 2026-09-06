@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <meta name="theme-color" content="#111827">
 
     <title>NovaAI — AI Chatbot</title>
@@ -15,6 +14,7 @@
 
     <main class="chat-app">
 
+        <!-- Header -->
         <header class="chat-header">
 
             <div class="brand">
@@ -31,6 +31,15 @@
             </div>
 
             <div class="header-actions">
+
+                <button
+                    id="historyToggle"
+                    class="header-button"
+                    type="button"
+                    title="Chat history"
+                >
+                    🕘
+                </button>
 
                 <button
                     id="newChat"
@@ -64,6 +73,38 @@
         </header>
 
 
+        <!-- Chat History -->
+        <aside id="historyPanel" class="history-panel">
+
+            <div class="history-header">
+                <h2>Chat History</h2>
+
+                <button
+                    id="closeHistory"
+                    class="history-close"
+                    type="button"
+                >
+                    ✕
+                </button>
+            </div>
+
+            <button
+                id="historyNewChat"
+                class="history-new-chat"
+                type="button"
+            >
+                ➕ New Chat
+            </button>
+
+            <div
+                id="conversationList"
+                class="conversation-list"
+            ></div>
+
+        </aside>
+
+
+        <!-- Chat messages -->
         <section id="chatMessages" class="chat-messages">
 
             <div class="welcome-card">
@@ -79,23 +120,10 @@
 
             </div>
 
-            <div class="message bot-message">
-
-                <div class="avatar">🤖</div>
-
-                <div>
-                    <div class="message-content">
-                        Hello! 👋 How can I help you today?
-                    </div>
-
-                    <div class="message-time">Now</div>
-                </div>
-
-            </div>
-
         </section>
 
 
+        <!-- Input -->
         <form id="chatForm" class="chat-form">
 
             <div class="input-wrapper">
@@ -132,3 +160,4 @@
 
 </body>
 </html>
+
