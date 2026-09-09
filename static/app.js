@@ -1,7 +1,3 @@
-
-
-
-
 const chatForm = document.getElementById("chatForm");
 const messageInput = document.getElementById("messageInput");
 const chatMessages = document.getElementById("chatMessages");
@@ -19,12 +15,25 @@ const STORAGE_KEY = "novaai_conversations";
 const ACTIVE_KEY = "novaai_active_conversation";
 const THEME_KEY = "novaai_theme";
 
-let conversations = JSON.parse(
-    localStorage.getItem(STORAGE_KEY) || "{}"
-);
+let conversations = {};
+
+try {
+    conversations = JSON.parse(
+        localStorage.getItem(STORAGE_KEY) || "{}"
+    );
+} catch (error) {
+    console.error("Could not load conversations:", error);
+    conversations = {};
+}
 
 let activeConversationId =
     localStorage.getItem(ACTIVE_KEY);
+
+function escapeHtml(text) {
+    const div = document.createElement("div");
+    div.textContent = text;
+    return div.innerHTML;
+}
 
 function createConversation() {
     const id = Date.now().toString();
@@ -35,44 +44,46 @@ function createConversation() {
     };
 
     activeConversationId = id;
-
     saveConversations();
 
     return id;
 }
-function saveConversations() {
 
+function saveConversations() {
     localStorage.setItem(
         STORAGE_KEY,
         JSON.stringify(conversations)
     );
 
-    localStorage.setItem(
-        ACTIVE_KEY,
-        activeConversationId
-    );
+    if (activeConversationId) {
+        localStorage.setItem(
+            ACTIVE_KEY,
+            activeConversationId
+        );
+    }
 
     renderConversationList();
 }
+
 function renderConversationList() {
+    if (!conversationList) {
+        return;
+    }
 
     conversationList.innerHTML = "";
 
     const ids = Object.keys(conversations).reverse();
 
     if (ids.length === 0) {
-
         conversationList.innerHTML = `
             <div class="history-empty">
                 No conversations yet.
             </div>
         `;
-
         return;
     }
 
     ids.forEach(id => {
-
         const conversation = conversations[id];
 
         const item = document.createElement("div");
@@ -84,7 +95,9 @@ function renderConversationList() {
         item.innerHTML = `
             <span>💬</span>
             <span class="conversation-title">
-                ${escapeHtml(conversation.title || "New conversation")}
+                ${escapeHtml(
+                    conversation.title || "New conversation"
+                )}
             </span>
             <button
                 class="history-delete"
@@ -96,50 +109,51 @@ function renderConversationList() {
         `;
 
         item.addEventListener("click", event => {
-
-            if (event.target.closest(".history-delete")) {
+            if (
+                event.target.closest(".history-delete")
+            ) {
                 return;
             }
 
             activeConversationId = id;
 
             saveConversations();
-
             renderConversation();
-
             renderConversationList();
 
-            historyPanel.classList.remove("open");
+            if (historyPanel) {
+                historyPanel.classList.remove("open");
+            }
         });
 
         const deleteButton =
             item.querySelector(".history-delete");
 
-        deleteButton.addEventListener("click", event => {
+        deleteButton.addEventListener(
+            "click",
+            event => {
+                event.stopPropagation();
 
-            event.stopPropagation();
+                delete conversations[id];
 
-            delete conversations[id];
+                if (id === activeConversationId) {
+                    const remaining =
+                        Object.keys(conversations);
 
-            if (id === activeConversationId) {
-
-                const remaining =
-                    Object.keys(conversations);
-
-                if (remaining.length > 0) {
-                    activeConversationId =
-                        remaining[remaining.length - 1];
-                } else {
-                    createConversation();
+                    if (remaining.length > 0) {
+                        activeConversationId =
+                            remaining[remaining.length - 1];
+                    } else {
+                        activeConversationId = null;
+                        createConversation();
+                    }
                 }
+
+                saveConversations();
+                renderConversation();
+                renderConversationList();
             }
-
-            saveConversations();
-
-            renderConversation();
-
-            renderConversationList();
-        });
+        );
 
         conversationList.appendChild(item);
     });
@@ -157,6 +171,10 @@ function getTime() {
 }
 
 function renderWelcome() {
+    if (!chatMessages) {
+        return;
+    }
+
     chatMessages.innerHTML = `
         <div class="welcome-card">
             <div class="welcome-icon">✨</div>
@@ -170,13 +188,14 @@ function renderWelcome() {
 }
 
 function renderMessage(text, type, time) {
-
     const message = document.createElement("div");
-    message.className = `message ${type}-message`;
+
+    message.className =
+        `message ${type}-message`;
 
     if (type === "bot") {
-
         const avatar = document.createElement("div");
+
         avatar.className = "avatar";
         avatar.textContent = "🤖";
 
@@ -185,11 +204,15 @@ function renderMessage(text, type, time) {
 
     const wrapper = document.createElement("div");
 
-    const content = document.createElement("div");
+    const content =
+        document.createElement("div");
+
     content.className = "message-content";
     content.textContent = text;
 
-    const timestamp = document.createElement("div");
+    const timestamp =
+        document.createElement("div");
+
     timestamp.className = "message-time";
     timestamp.textContent = time;
 
@@ -202,8 +225,8 @@ function renderMessage(text, type, time) {
 }
 
 function renderConversation() {
-
-    const conversation = getActiveConversation();
+    const conversation =
+        getActiveConversation();
 
     renderWelcome();
 
@@ -219,12 +242,13 @@ function renderConversation() {
         );
     });
 
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+    chatMessages.scrollTop =
+        chatMessages.scrollHeight;
 }
 
 function saveMessage(text, type, role) {
-
-    const conversation = getActiveConversation();
+    const conversation =
+        getActiveConversation();
 
     if (!conversation) {
         return;
@@ -251,8 +275,8 @@ function saveMessage(text, type, role) {
 }
 
 function getApiHistory() {
-
-    const conversation = getActiveConversation();
+    const conversation =
+        getActiveConversation();
 
     if (!conversation) {
         return [];
@@ -263,7 +287,7 @@ function getApiHistory() {
             message.role === "user" ||
             message.role === "assistant"
         )
-        .slice(-21)
+        .slice(-20)
         .map(message => ({
             role: message.role,
             content: message.text
@@ -271,30 +295,43 @@ function getApiHistory() {
 }
 
 function addMessage(text, type, role) {
+    renderMessage(
+        text,
+        type,
+        getTime()
+    );
 
-    const time = getTime();
-
-    renderMessage(text, type, time);
-
-    saveMessage(text, type, role);
+    saveMessage(
+        text,
+        type,
+        role
+    );
 
     chatMessages.scrollTop =
         chatMessages.scrollHeight;
 }
 
 function addTypingIndicator() {
+    const message =
+        document.createElement("div");
 
-    const message = document.createElement("div");
+    message.className =
+        "message bot-message";
 
-    message.className = "message bot-message";
-    message.id = "typingIndicator";
+    message.id =
+        "typingIndicator";
 
-    const avatar = document.createElement("div");
+    const avatar =
+        document.createElement("div");
+
     avatar.className = "avatar";
     avatar.textContent = "🤖";
 
-    const content = document.createElement("div");
-    content.className = "message-content typing";
+    const content =
+        document.createElement("div");
+
+    content.className =
+        "message-content typing";
 
     content.innerHTML =
         "<span></span><span></span><span></span>";
@@ -309,165 +346,213 @@ function addTypingIndicator() {
 }
 
 function removeTypingIndicator() {
-
     const typing =
-        document.getElementById("typingIndicator");
+        document.getElementById(
+            "typingIndicator"
+        );
 
     if (typing) {
         typing.remove();
     }
 }
 
-chatForm.addEventListener("submit", async (event) => {
+chatForm.addEventListener(
+    "submit",
+    async event => {
 
-    event.preventDefault();
+        event.preventDefault();
 
-    const message =
-        messageInput.value.trim();
+        const message =
+            messageInput.value.trim();
 
-    if (!message) {
-        return;
-    }
-
-    if (!activeConversationId) {
-        createConversation();
-    }
-
-    addMessage(
-        message,
-        "user",
-        "user"
-    );
-history: getApiHistory()
-    messageInput.value = "";
-
-    messageInput.disabled = true;
-    sendButton.disabled = true;
-
-    addTypingIndicator();
-
-    try {
-
-        const response = await fetch(
-            "/api/chat",
-            {
-                method: "POST",
-
-                headers: {
-                    "Content-Type": "application/json"
-                },
-
-                body: JSON.stringify({
-                    message: message,
-                    history: getApiHistory()
-                })
-            }
-        );
-
-        const data = await response.json();
-
-        removeTypingIndicator();
-
-        if (data.success) {
-
-            addMessage(
-                data.response,
-                "bot",
-                "assistant"
-            );
-
-        } else {
-
-            addMessage(
-                data.error ||
-                "Something went wrong.",
-                "bot",
-                "assistant"
-            );
+        if (!message) {
+            return;
         }
 
-    } catch (error) {
-
-        removeTypingIndicator();
+        if (!activeConversationId) {
+            createConversation();
+        }
 
         addMessage(
-            "Unable to connect to the server. Please try again.",
-            "bot",
-            "assistant"
+            message,
+            "user",
+            "user"
         );
 
-        console.error(error);
+        messageInput.value = "";
+
+        messageInput.disabled = true;
+        sendButton.disabled = true;
+
+        addTypingIndicator();
+
+        try {
+
+            console.log(
+                "Sending message to NovaAI:",
+                message
+            );
+
+            const response =
+                await fetch(
+                    "/api/chat",
+                    {
+                        method: "POST",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+
+                        body: JSON.stringify({
+                            message: message,
+                            history:
+                                getApiHistory()
+                        })
+                    }
+                );
+
+            console.log(
+                "API HTTP status:",
+                response.status
+            );
+
+            const data =
+                await response.json();
+
+            console.log(
+                "NovaAI response:",
+                data
+            );
+
+            removeTypingIndicator();
+
+            if (data.success) {
+
+                addMessage(
+                    data.response,
+                    "bot",
+                    "assistant"
+                );
+
+            } else {
+
+                addMessage(
+                    data.error ||
+                    "NovaAI could not respond.",
+                    "bot",
+                    "assistant"
+                );
+            }
+
+        } catch (error) {
+
+            console.error(
+                "NovaAI request failed:",
+                error
+            );
+
+            removeTypingIndicator();
+
+            addMessage(
+                "Unable to connect to the server. Please try again.",
+                "bot",
+                "assistant"
+            );
+
+        } finally {
+
+            messageInput.disabled = false;
+            sendButton.disabled = false;
+
+            messageInput.focus();
+        }
     }
+);
 
-    messageInput.disabled = false;
-    sendButton.disabled = false;
+newChat.addEventListener(
+    "click",
+    () => {
 
-    messageInput.focus();
-});
-
-newChat.addEventListener("click", () => {
-
-    createConversation();
-
-    renderConversation();
-
-    messageInput.focus();
-});
-
-clearChat.addEventListener("click", () => {
-
-    if (!activeConversationId) {
         createConversation();
+
+        renderConversation();
+
+        messageInput.focus();
     }
+);
 
-    conversations[activeConversationId] = {
-        title: "New conversation",
-        messages: []
-    };
+clearChat.addEventListener(
+    "click",
+    () => {
 
-    saveConversations();
+        if (!activeConversationId) {
+            createConversation();
+        }
 
-    renderWelcome();
+        conversations[
+            activeConversationId
+        ] = {
+            title: "New conversation",
+            messages: []
+        };
 
-    messageInput.focus();
-});
+        saveConversations();
 
-themeToggle.addEventListener("click", () => {
+        renderWelcome();
 
-    const dark =
-        document.body.classList.toggle("dark-mode");
+        messageInput.focus();
+    }
+);
 
-    localStorage.setItem(
-        THEME_KEY,
-        dark ? "dark" : "light"
-    );
+themeToggle.addEventListener(
+    "click",
+    () => {
 
-    themeToggle.textContent =
-        dark ? "☀️" : "🌙";
-});
+        const dark =
+            document.body.classList.toggle(
+                "dark-mode"
+            );
+
+        localStorage.setItem(
+            THEME_KEY,
+            dark ? "dark" : "light"
+        );
+
+        themeToggle.textContent =
+            dark ? "☀️" : "🌙";
+    }
+);
 
 function loadTheme() {
 
     const theme =
-        localStorage.getItem(THEME_KEY);
+        localStorage.getItem(
+            THEME_KEY
+        );
 
     if (theme === "dark") {
 
-        document.body.classList.add("dark-mode");
+        document.body.classList.add(
+            "dark-mode"
+        );
 
-        themeToggle.textContent = "☀️";
+        themeToggle.textContent =
+            "☀️";
 
     } else {
 
-        themeToggle.textContent = "🌙";
+        themeToggle.textContent =
+            "🌙";
     }
 }
 
 function initialize() {
 
-    if (!activeConversationId ||
-        !conversations[activeConversationId]) {
-
+    if (
+        !activeConversationId ||
+        !conversations[activeConversationId]
+    ) {
         createConversation();
     }
 
@@ -478,22 +563,44 @@ function initialize() {
     messageInput.focus();
 }
 
+historyToggle.addEventListener(
+    "click",
+    () => {
+
+        historyPanel.classList.toggle(
+            "open"
+        );
+
+        renderConversationList();
+    }
+);
+
+closeHistory.addEventListener(
+    "click",
+    () => {
+
+        historyPanel.classList.remove(
+            "open"
+        );
+    }
+);
+
+historyNewChat.addEventListener(
+    "click",
+    () => {
+
+        createConversation();
+
+        renderConversation();
+
+        renderConversationList();
+
+        historyPanel.classList.remove(
+            "open"
+        );
+
+        messageInput.focus();
+    }
+);
 
 initialize();
-
-historyToggle.addEventListener("click", () => {
-    historyPanel.classList.toggle("open");
-    renderConversationList();
-});
-
-closeHistory.addEventListener("click", () => {
-    historyPanel.classList.remove("open");
-});
-
-historyNewChat.addEventListener("click", () => {
-    createConversation();
-    renderConversation();
-    renderConversationList();
-    historyPanel.classList.remove("open");
-    messageInput.focus();
-});

@@ -7,9 +7,11 @@ load_dotenv()
 
 app = Flask(__name__)
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-OPENAI_URL = "https://api.openai.com/v1/responses"
-MAX_MESSAGES = 20
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_URL = (
+    "https://generativelanguage.googleapis.com/v1beta/models/"
+    "gemini-3.5-flash:generateContent"
+)
 
 
 @app.route("/")
@@ -22,7 +24,7 @@ def chat():
     try:
         data = request.get_json(silent=True) or {}
 
-        message = data.get("message", "").strip()
+        message = str(data.get("message", "")).strip()
         history = data.get("history", [])
 
         if not message:
@@ -31,70 +33,74 @@ def chat():
                 "error": "Message cannot be empty."
             }), 400
 
-        if not OPENAI_API_KEY:
+        if not GEMINI_API_KEY:
             return jsonify({
                 "success": False,
-                "error": "OPENAI_API_KEY is missing."
+                "error": "Gemini API key is not configured."
             }), 500
 
-        if not isinstance(history, list):
-            history = []
+        contents = []
 
-        history = history[-MAX_MESSAGES:]
+        if isinstance(history, list):
+            for item in history[-20:]:
+                if not isinstance(item, dict):
+                    continue
 
-        conversation = []
+                role = item.get("role")
+                text = item.get("content", "")
 
-        for item in history:
-            if not isinstance(item, dict):
-                continue
+                if role not in ("user", "assistant"):
+                    continue
 
-            role = item.get("role")
-            text = item.get("content", "")
+                if not isinstance(text, str) or not text.strip():
+                    continue
 
-            if role not in ("user", "assistant"):
-                continue
+                gemini_role = "model" if role == "assistant" else "user"
 
-            if not isinstance(text, str) or not text.strip():
-                continue
+                contents.append({
+                    "role": gemini_role,
+                    "parts": [
+                        {"text": text[:4000]}
+                    ]
+                })
 
-            conversation.append({
-                "role": role,
-                "content": text[:4000]
-            })
-
-        conversation.append({
+        contents.append({
             "role": "user",
-            "content": message[:4000]
+            "parts": [
+                {"text": message}
+            ]
         })
 
-        headers = {
-            "Authorization": f"Bearer {OPENAI_API_KEY}",
-            "Content-Type": "application/json"
-        }
-
         payload = {
-            "model": "gpt-5",
-            "instructions": (
-                "You are NovaAI, a helpful, friendly and professional "
-                "AI assistant. Give clear, accurate and easy-to-understand "
-                "answers. When explaining programming concepts, include "
-                "useful examples when appropriate. Do not claim to have "
-                "performed actions that you cannot actually perform."
-            ),
-            "input": conversation
+            "contents": contents,
+            "systemInstruction": {
+                "parts": [
+                    {
+                        "text": (
+                            "You are NovaAI, a helpful, friendly and "
+                            "professional AI assistant. Give clear, "
+                            "accurate and easy-to-understand answers."
+                        )
+                    }
+                ]
+            },
+            "generationConfig": {
+                "temperature": 0.7,
+                "maxOutputTokens": 2048
+            }
         }
 
         response = requests.post(
-            OPENAI_URL,
-            headers=headers,
+            GEMINI_URL,
+            params={"key": GEMINI_API_KEY},
             json=payload,
             timeout=60
         )
 
-        print("AI API STATUS:", response.status_code)
+        print("GEMINI API STATUS:", response.status_code)
 
         if not response.ok:
-            print("AI API ERROR:", response.text)
+            print("GEMINI API ERROR:", response.text)
 
             return jsonify({
                 "success": False,
@@ -106,15 +112,19 @@ def chat():
 
         answer = ""
 
-        for item in result.get("output", []):
-            for content in item.get("content", []):
-                if content.get("type") == "output_text":
-                    answer += content.get("text", "")
+        for candidate in result.get("candidates", []):
+            content = candidate.get("content", {})
+
+            for part in content.get("parts", []):
+                text = part.get("text", "")
+
+                if text:
+                    answer += text
 
         answer = answer.strip()
 
         if not answer:
-            print("EMPTY AI RESPONSE:", result)
+            print("EMPTY GEMINI RESPONSE:", result)
 
             return jsonify({
                 "success": False,
@@ -129,7 +139,7 @@ def chat():
     except requests.Timeout:
         return jsonify({
             "success": False,
-            "error": "The AI request timed out."
+            "error": "The AI request timed out. Please try again."
         }), 504
 
     except requests.RequestException as error:
@@ -155,3 +165,4 @@ if __name__ == "__main__":
         port=int(os.environ.get("PORT", 5000)),
         debug=False
     )
+
