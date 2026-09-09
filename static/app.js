@@ -35,6 +35,13 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+function getTime() {
+    return new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit"
+    });
+}
+
 function createConversation() {
     const id = Date.now().toString();
 
@@ -44,6 +51,7 @@ function createConversation() {
     };
 
     activeConversationId = id;
+
     saveConversations();
 
     return id;
@@ -63,6 +71,10 @@ function saveConversations() {
     }
 
     renderConversationList();
+}
+
+function getActiveConversation() {
+    return conversations[activeConversationId];
 }
 
 function renderConversationList() {
@@ -94,11 +106,13 @@ function renderConversationList() {
 
         item.innerHTML = `
             <span>💬</span>
+
             <span class="conversation-title">
                 ${escapeHtml(
                     conversation.title || "New conversation"
                 )}
             </span>
+
             <button
                 class="history-delete"
                 type="button"
@@ -110,7 +124,9 @@ function renderConversationList() {
 
         item.addEventListener("click", event => {
             if (
-                event.target.closest(".history-delete")
+                event.target.closest(
+                    ".history-delete"
+                )
             ) {
                 return;
             }
@@ -129,44 +145,43 @@ function renderConversationList() {
         const deleteButton =
             item.querySelector(".history-delete");
 
-        deleteButton.addEventListener(
-            "click",
-            event => {
-                event.stopPropagation();
+        if (deleteButton) {
+            deleteButton.addEventListener(
+                "click",
+                event => {
+                    event.stopPropagation();
 
-                delete conversations[id];
+                    delete conversations[id];
 
-                if (id === activeConversationId) {
-                    const remaining =
-                        Object.keys(conversations);
+                    if (
+                        id ===
+                        activeConversationId
+                    ) {
+                        const remaining =
+                            Object.keys(
+                                conversations
+                            );
 
-                    if (remaining.length > 0) {
-                        activeConversationId =
-                            remaining[remaining.length - 1];
-                    } else {
-                        activeConversationId = null;
-                        createConversation();
+                        if (
+                            remaining.length > 0
+                        ) {
+                            activeConversationId =
+                                remaining[
+                                    remaining.length - 1
+                                ];
+                        } else {
+                            createConversation();
+                        }
                     }
-                }
 
-                saveConversations();
-                renderConversation();
-                renderConversationList();
-            }
-        );
+                    saveConversations();
+                    renderConversation();
+                    renderConversationList();
+                }
+            );
+        }
 
         conversationList.appendChild(item);
-    });
-}
-
-function getActiveConversation() {
-    return conversations[activeConversationId];
-}
-
-function getTime() {
-    return new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit"
     });
 }
 
@@ -178,7 +193,9 @@ function renderWelcome() {
     chatMessages.innerHTML = `
         <div class="welcome-card">
             <div class="welcome-icon">✨</div>
+
             <h2>Welcome to NovaAI</h2>
+
             <p>
                 Your intelligent AI assistant.
                 Ask a question and start a conversation.
@@ -188,13 +205,18 @@ function renderWelcome() {
 }
 
 function renderMessage(text, type, time) {
+    if (!chatMessages) {
+        return;
+    }
+
     const message = document.createElement("div");
 
     message.className =
         `message ${type}-message`;
 
     if (type === "bot") {
-        const avatar = document.createElement("div");
+        const avatar =
+            document.createElement("div");
 
         avatar.className = "avatar";
         avatar.textContent = "🤖";
@@ -202,18 +224,23 @@ function renderMessage(text, type, time) {
         message.appendChild(avatar);
     }
 
-    const wrapper = document.createElement("div");
+    const wrapper =
+        document.createElement("div");
 
     const content =
         document.createElement("div");
 
-    content.className = "message-content";
+    content.className =
+        "message-content";
+
     content.textContent = text;
 
     const timestamp =
         document.createElement("div");
 
-    timestamp.className = "message-time";
+    timestamp.className =
+        "message-time";
+
     timestamp.textContent = time;
 
     wrapper.appendChild(content);
@@ -242,8 +269,10 @@ function renderConversation() {
         );
     });
 
-    chatMessages.scrollTop =
-        chatMessages.scrollHeight;
+    if (chatMessages) {
+        chatMessages.scrollTop =
+            chatMessages.scrollHeight;
+    }
 }
 
 function saveMessage(text, type, role) {
@@ -262,7 +291,8 @@ function saveMessage(text, type, role) {
     });
 
     if (
-        conversation.title === "New conversation" &&
+        conversation.title ===
+            "New conversation" &&
         role === "user"
     ) {
         conversation.title =
@@ -295,10 +325,12 @@ function getApiHistory() {
 }
 
 function addMessage(text, type, role) {
+    const time = getTime();
+
     renderMessage(
         text,
         type,
-        getTime()
+        time
     );
 
     saveMessage(
@@ -307,11 +339,19 @@ function addMessage(text, type, role) {
         role
     );
 
-    chatMessages.scrollTop =
-        chatMessages.scrollHeight;
+    if (chatMessages) {
+        chatMessages.scrollTop =
+            chatMessages.scrollHeight;
+    }
 }
 
 function addTypingIndicator() {
+    if (!chatMessages) {
+        return;
+    }
+
+    removeTypingIndicator();
+
     const message =
         document.createElement("div");
 
@@ -356,251 +396,274 @@ function removeTypingIndicator() {
     }
 }
 
-chatForm.addEventListener(
-    "submit",
-    async event => {
+async function sendMessage() {
+    const message =
+        messageInput.value.trim();
 
-        event.preventDefault();
+    if (!message) {
+        return;
+    }
 
-        const message =
-            messageInput.value.trim();
+    if (!activeConversationId) {
+        createConversation();
+    }
 
-        if (!message) {
-            return;
-        }
+    addMessage(
+        message,
+        "user",
+        "user"
+    );
 
-        if (!activeConversationId) {
-            createConversation();
-        }
+    messageInput.value = "";
 
-        addMessage(
-            message,
-            "user",
-            "user"
-        );
+    messageInput.disabled = true;
+    sendButton.disabled = true;
 
-        messageInput.value = "";
+    addTypingIndicator();
 
-        messageInput.disabled = true;
-        sendButton.disabled = true;
+    try {
+        /*
+         * IMPORTANT:
+         * Send the previous conversation history
+         * together with the new message.
+         */
+        const history =
+            getApiHistory().slice(0, -1);
 
-        addTypingIndicator();
+        const response =
+            await fetch(
+                "/api/chat",
+                {
+                    method: "POST",
 
-        try {
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
 
-            console.log(
-                "Sending message to NovaAI:",
-                message
+                    body: JSON.stringify({
+                        message: message,
+                        history: history
+                    })
+                }
             );
 
-            const response =
-                await fetch(
-                    "/api/chat",
-                    {
-                        method: "POST",
+        const data =
+            await response.json();
 
-                        headers: {
-                            "Content-Type":
-                                "application/json"
-                        },
+        removeTypingIndicator();
 
-                        body: JSON.stringify({
-                            message: message,
-                            history:
-                                getApiHistory()
-                        })
-                    }
-                );
-
-            console.log(
-                "API HTTP status:",
-                response.status
-            );
-
-            const data =
-                await response.json();
-
-            console.log(
-                "NovaAI response:",
-                data
-            );
-
-            removeTypingIndicator();
-
-            if (data.success) {
-
-                addMessage(
-                    data.response,
-                    "bot",
-                    "assistant"
-                );
-
-            } else {
-
-                addMessage(
-                    data.error ||
-                    "NovaAI could not respond.",
-                    "bot",
-                    "assistant"
-                );
-            }
-
-        } catch (error) {
-
-            console.error(
-                "NovaAI request failed:",
-                error
-            );
-
-            removeTypingIndicator();
-
+        if (
+            response.ok &&
+            data.success
+        ) {
             addMessage(
-                "Unable to connect to the server. Please try again.",
+                data.response,
                 "bot",
                 "assistant"
             );
+        } else {
+            addMessage(
+                data.error ||
+                    "Something went wrong.",
+                "bot",
+                "assistant"
+            );
+        }
+    } catch (error) {
+        console.error(
+            "Chat request error:",
+            error
+        );
 
-        } finally {
+        removeTypingIndicator();
 
-            messageInput.disabled = false;
-            sendButton.disabled = false;
+        addMessage(
+            "Unable to connect to the server. Please try again.",
+            "bot",
+            "assistant"
+        );
+    }
+
+    messageInput.disabled = false;
+    sendButton.disabled = false;
+
+    messageInput.focus();
+}
+
+if (chatForm) {
+    chatForm.addEventListener(
+        "submit",
+        event => {
+            event.preventDefault();
+            sendMessage();
+        }
+    );
+}
+
+if (messageInput) {
+    messageInput.addEventListener(
+        "keydown",
+        event => {
+            if (
+                event.key === "Enter" &&
+                !event.shiftKey
+            ) {
+                event.preventDefault();
+
+                if (
+                    !messageInput.disabled
+                ) {
+                    sendMessage();
+                }
+            }
+        }
+    );
+}
+
+if (newChat) {
+    newChat.addEventListener(
+        "click",
+        () => {
+            createConversation();
+            renderConversation();
 
             messageInput.focus();
         }
-    }
-);
+    );
+}
 
-newChat.addEventListener(
-    "click",
-    () => {
+if (clearChat) {
+    clearChat.addEventListener(
+        "click",
+        () => {
+            if (!activeConversationId) {
+                createConversation();
+            }
 
-        createConversation();
+            conversations[
+                activeConversationId
+            ] = {
+                title: "New conversation",
+                messages: []
+            };
 
-        renderConversation();
+            saveConversations();
+            renderWelcome();
 
-        messageInput.focus();
-    }
-);
-
-clearChat.addEventListener(
-    "click",
-    () => {
-
-        if (!activeConversationId) {
-            createConversation();
+            messageInput.focus();
         }
+    );
+}
 
-        conversations[
-            activeConversationId
-        ] = {
-            title: "New conversation",
-            messages: []
-        };
+if (themeToggle) {
+    themeToggle.addEventListener(
+        "click",
+        () => {
+            const dark =
+                document.body.classList.toggle(
+                    "dark-mode"
+                );
 
-        saveConversations();
-
-        renderWelcome();
-
-        messageInput.focus();
-    }
-);
-
-themeToggle.addEventListener(
-    "click",
-    () => {
-
-        const dark =
-            document.body.classList.toggle(
-                "dark-mode"
+            localStorage.setItem(
+                THEME_KEY,
+                dark ? "dark" : "light"
             );
 
-        localStorage.setItem(
-            THEME_KEY,
-            dark ? "dark" : "light"
-        );
-
-        themeToggle.textContent =
-            dark ? "☀️" : "🌙";
-    }
-);
+            themeToggle.textContent =
+                dark ? "☀️" : "🌙";
+        }
+    );
+}
 
 function loadTheme() {
-
     const theme =
         localStorage.getItem(
             THEME_KEY
         );
 
     if (theme === "dark") {
-
         document.body.classList.add(
             "dark-mode"
         );
 
-        themeToggle.textContent =
-            "☀️";
-
+        if (themeToggle) {
+            themeToggle.textContent =
+                "☀️";
+        }
     } else {
-
-        themeToggle.textContent =
-            "🌙";
+        if (themeToggle) {
+            themeToggle.textContent =
+                "🌙";
+        }
     }
 }
 
-function initialize() {
+if (historyToggle) {
+    historyToggle.addEventListener(
+        "click",
+        () => {
+            if (historyPanel) {
+                historyPanel.classList.toggle(
+                    "open"
+                );
+            }
 
+            renderConversationList();
+        }
+    );
+}
+
+if (closeHistory) {
+    closeHistory.addEventListener(
+        "click",
+        () => {
+            if (historyPanel) {
+                historyPanel.classList.remove(
+                    "open"
+                );
+            }
+        }
+    );
+}
+
+if (historyNewChat) {
+    historyNewChat.addEventListener(
+        "click",
+        () => {
+            createConversation();
+            renderConversation();
+            renderConversationList();
+
+            if (historyPanel) {
+                historyPanel.classList.remove(
+                    "open"
+                );
+            }
+
+            messageInput.focus();
+        }
+    );
+}
+
+function initialize() {
     if (
         !activeConversationId ||
-        !conversations[activeConversationId]
+        !conversations[
+            activeConversationId
+        ]
     ) {
         createConversation();
     }
 
     renderConversation();
-
+    renderConversationList();
     loadTheme();
 
-    messageInput.focus();
-}
-
-historyToggle.addEventListener(
-    "click",
-    () => {
-
-        historyPanel.classList.toggle(
-            "open"
-        );
-
-        renderConversationList();
-    }
-);
-
-closeHistory.addEventListener(
-    "click",
-    () => {
-
-        historyPanel.classList.remove(
-            "open"
-        );
-    }
-);
-
-historyNewChat.addEventListener(
-    "click",
-    () => {
-
-        createConversation();
-
-        renderConversation();
-
-        renderConversationList();
-
-        historyPanel.classList.remove(
-            "open"
-        );
-
+    if (messageInput) {
         messageInput.focus();
     }
-);
+}
 
 initialize();
+
